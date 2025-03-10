@@ -23,10 +23,14 @@ pub fn log_warning(message: &str) {
 
 /// Writes a message to a log file.
 fn write_to_log_file(message: String) {
+    let log_dir = std::path::Path::new("logs");
+    if !log_dir.exists() {
+        std::fs::create_dir_all(log_dir).unwrap_or_else(|_| panic!("Failed to create log directory"));
+    }
     let mut file = File::options()
         .append(true)
         .create(true)
-        .open("logs/app.log")
+        .open(log_dir.join("app.log"))
         .unwrap_or_else(|_| panic!("Failed to open log file"));
 
     writeln!(file, "{}", message).unwrap_or_else(|_| panic!("Failed to write to log file"));
