@@ -5,6 +5,7 @@ mod utils;
 
 use config::get_env_var;
 use scraper::fetch_stock_data;
+use utils::{log_info, save_to_json};
 
 #[tokio::main]
 async fn main() {
@@ -16,18 +17,8 @@ async fn main() {
 
     match fetch_stock_data(&url).await {
         Ok(stocks) => {
-            log::info!("Fetched {} stocks", stocks.len());
-            for stock in stocks {
-                println!(
-                    "Symbol: {}, Open: {}, Close: {}, % Change: {}, Volume: {}, Turnover: {}",
-                    stock.symbol,
-                    stock.open_price,
-                    stock.close_price,
-                    stock.percent_change,
-                    stock.volume,
-                    stock.turnover
-                );
-            }
+            log_info(&format!("Fetched {} stocks", stocks.len()));
+            save_to_json(&stocks, "data/stocks.json");
         }
         Err(e) => log::error!("Error fetching stock data: {}", e),
     }
