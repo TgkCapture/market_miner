@@ -8,4 +8,5 @@ pub struct Stock {
     pub percent_change: f64,
     pub volume: f64,
     pub turnover: f64,
+    pub timestamp: chrono::NaiveDateTime,
 }
