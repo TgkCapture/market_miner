@@ -79,9 +79,7 @@ pub async fn insert_stock_data(
     stocks: Vec<crate::models::Stock>
 ) -> Result<(), Error> {
     for stock in stocks {
-        let timestamp: DateTime<Utc> = Utc::now(); 
-        let timestamp_str = timestamp.to_rfc3339();
-
+        
         client.execute(
             "INSERT INTO stocks (symbol, open_price, close_price, percent_change, volume, turnover, timestamp) 
              VALUES ($1, $2, $3, $4, $5, $6, $7)",
@@ -92,7 +90,7 @@ pub async fn insert_stock_data(
                 &stock.percent_change,
                 &stock.volume,
                 &stock.turnover,
-                &timestamp_str, 
+                &stock.timestamp, 
             ],
         ).await?;
     }
