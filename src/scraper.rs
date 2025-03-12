@@ -1,6 +1,7 @@
 use reqwest::Error;
 use scraper::{Html, Selector};
 use crate::models::Stock;
+use chrono::{DateTime};
 
 pub async fn fetch_stock_data(url: &str) -> Result<Vec<Stock>, Error> {
     // Fetch the HTML content
@@ -37,6 +38,8 @@ pub async fn fetch_stock_data(url: &str) -> Result<Vec<Stock>, Error> {
                 let volume = parse_number(cells[4].text().collect::<String>());
                 let turnover = parse_number(cells[5].text().collect::<String>());
 
+                let timestamp = Utc::now().naive_utc();
+
                 stocks.push(Stock {
                     symbol,
                     open_price,
@@ -44,6 +47,7 @@ pub async fn fetch_stock_data(url: &str) -> Result<Vec<Stock>, Error> {
                     percent_change,
                     volume,
                     turnover,
+                    timestamp,
                 });
             }
         }
