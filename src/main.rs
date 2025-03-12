@@ -1,28 +1,29 @@
-mod config;
-mod models;
+mod db;
 mod scraper;
+mod models;
 mod utils;
 
-use config::get_env_var;
+use db::{create_database_if_not_exists, connect_db, insert_stock_data};
 use scraper::fetch_stock_data;
-use utils::{log_error, log_info, log_warning, save_to_json};
+use utils::{log_error, log_info};
+use dotenvy::dotenv;
+use std::env;
 
 #[tokio::main]
 async fn main() {
-    pretty_env_logger::init();
+    dotenv().ok();
     log_info("Starting Market Miner...");
 
-    let url = get_env_var("STOCK_API_URL");
-    log_info(&format!("Fetching data from: {}", url));
+    create_database_if_not_exists().await.expect("Failed to create database");
+    
+    let client = connect_db().await.expect("Failed to connect to database");
 
+    let url = env::var("STOCK_API_URL").expect("STOCK_API_URL must be set");
     match fetch_stock_data(&url).await {
         Ok(stocks) => {
             log_info(&format!("Fetched {} stocks", stocks.len()));
-            save_to_json(&stocks, "data/stocks.json");
+            insert_stock_data(&client, stocks).await.expect("Failed to insert stock data");
         }
-        Err(e) => {
-            log_error(&format!("Error fetching stock data: {}", e));
-            log_warning("Check your internet connection or the website URL.");
-        }
+        Err(e) => log_error(&format!("Error fetching stock data: {}", e)),
     }
 }
