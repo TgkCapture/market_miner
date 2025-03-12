@@ -1,7 +1,6 @@
 use tokio_postgres::{NoTls, Error};
 use dotenvy::dotenv;
 use std::env;
-use chrono::{DateTime, Utc};
 
 fn get_db_config() -> (String, String, String, String, String) {
     dotenv().ok(); // Load .env file
