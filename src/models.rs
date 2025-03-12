@@ -1,4 +1,5 @@
 use serde::Serialize;
+use chrono::{DateTime, Utc};
 
 #[derive(Serialize, Debug)]
 pub struct Stock {
@@ -8,5 +9,5 @@ pub struct Stock {
     pub percent_change: f64,
     pub volume: f64,
     pub turnover: f64,
-    pub timestamp: chrono::NaiveDateTime,
+    pub timestamp: DateTime<Utc>,
 }
