@@ -18,8 +18,9 @@ fn get_db_config() -> (String, String, String, String, String) {
 pub async fn create_database_if_not_exists() -> Result<(), Error> {
     let (host, user, password, dbname, port) = get_db_config();
     
-    let admin_conn_str = format!("host={} user={} password={} port={} dbname={}", host, user, password, port, dbname);
-
+    // Connect to the default 'postgres' database
+    let admin_conn_str = format!("host={} user={} password={} port={} dbname=postgres", host, user, password, port);
+    
     let (client, connection) = tokio_postgres::connect(&admin_conn_str, NoTls).await?;
     tokio::spawn(async move {
         if let Err(e) = connection.await {
@@ -27,8 +28,8 @@ pub async fn create_database_if_not_exists() -> Result<(), Error> {
         }
     });
 
-    let check_db_query = format!("SELECT 1 FROM pg_database WHERE datname = '{}'", dbname);
-    let exists = client.query(check_db_query.as_str(), &[]).await?;
+    let check_db_query = "SELECT 1 FROM pg_database WHERE datname = $1";
+    let exists = client.query(check_db_query, &[&dbname]).await?;
 
     if exists.is_empty() {
         println!("Database '{}' does not exist. Creating...", dbname);
