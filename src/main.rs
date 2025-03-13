@@ -5,7 +5,7 @@ mod utils;
 
 use db::{create_database_if_not_exists, connect_db, insert_stock_data};
 use scraper::fetch_stock_data;
-use utils::{log_error, log_info};
+use utils::{log_error, log_info, log_warning}; // Add log_warning
 use dotenvy::dotenv;
 use std::env;
 
@@ -14,15 +14,37 @@ async fn main() {
     dotenv().ok();
     log_info("Starting Market Miner...");
 
-    create_database_if_not_exists().await.expect("Failed to create database");
-    
-    let client = connect_db().await.expect("Failed to connect to database");
+    // Create the database if it doesn't exist
+    if let Err(e) = create_database_if_not_exists().await {
+        log_error(&format!("Failed to create database: {}", e));
+        return; 
+    }
 
+    // Connect to the database
+    let client = match connect_db().await {
+        Ok(client) => client,
+        Err(e) => {
+            log_error(&format!("Failed to connect to database: {}", e));
+            return;
+        }
+    };
+
+    // Fetch stock data
     let url = env::var("STOCK_API_URL").expect("STOCK_API_URL must be set");
     match fetch_stock_data(&url).await {
         Ok(stocks) => {
-            log_info(&format!("Fetched {} stocks", stocks.len()));
-            insert_stock_data(&client, stocks).await.expect("Failed to insert stock data");
+            let num_stocks = stocks.len();
+            log_info(&format!("Fetched {} stocks", num_stocks));
+
+            // Log a warning if no stocks were fetched
+            if num_stocks == 0 {
+                log_warning("No stocks were fetched from the API.");
+            }
+
+            // Insert stock data into the database
+            if let Err(e) = insert_stock_data(&client, stocks).await {
+                log_error(&format!("Failed to insert stock data: {}", e));
+            }
         }
         Err(e) => log_error(&format!("Error fetching stock data: {}", e)),
     }
