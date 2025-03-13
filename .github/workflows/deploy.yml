@@ -40,4 +40,4 @@ jobs:
         run: |
           scp -o StrictHostKeyChecking=no -r ./target/release/market_miner tgk@172.234.116.162:/home/tgk/code-base/Deployments/market-miner-binaries/
           ssh -o StrictHostKeyChecking=no tgk@172.234.116.162 "chmod +x /home/tgk/code-base/Deployments/market-miner-binaries/market_miner"
-          ssh -o StrictHostKeyChecking=no tgk@172.234.116.162 "sudo supervisorctl restart market_miner"
+          ssh -o StrictHostKeyChecking=no tgk@172.234.116.162 "sudo -S supervisorctl restart market_miner"
