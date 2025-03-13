@@ -1,0 +1,38 @@
+name: Market-Miner
+
+on:
+  pull_request:
+    branches:
+      - master
+    types:
+      - closed
+
+jobs:
+  deploy:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Build the project (release mode)
+        run: cargo build --release
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+
+      - name: Deploy to VPS
+        run: |
+          scp -o StrictHostKeyChecking=no -r ./target/release/market_miner tgk@172.234.116.162:/home/tgk/code-base/Deployments/market-miner-binaries/
+          ssh -o StrictHostKeyChecking=no tgk@172.234.116.162 "chmod +x /home/tgk/code-base/Deployments/market-miner-binaries/market_miner"
+          ssh -o StrictHostKeyChecking=no tgk@172.234.116.162 "sudo supervisorctl restart market_miner"
