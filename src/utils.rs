@@ -1,7 +1,7 @@
-use log::{error, info, warn};
+use log::{error, info};
 use std::fs::File;
 use std::io::Write;
-use serde::Serialize;
+// use serde::Serialize;
 
 /// Logs an error message and writes it to a log file.
 pub fn log_error(message: &str) {
@@ -36,7 +36,7 @@ fn write_to_log_file(message: String) {
     writeln!(file, "{}", message).unwrap_or_else(|_| panic!("Failed to write to log file"));
 }
 
-/// Saves data to a JSON file.
+// Saves data to a JSON file.
 // pub fn save_to_json<T: Serialize>(data: &T, file_path: &str) {
 //     let json = serde_json::to_string_pretty(data).unwrap_or_else(|_| panic!("Failed to serialize data to JSON"));
 //     let mut file = File::create(file_path).unwrap_or_else(|_| panic!("Failed to create file: {}", file_path));
