@@ -5,7 +5,7 @@ mod utils;
 
 use db::{create_database_if_not_exists, connect_db, insert_stock_data};
 use scraper::fetch_stock_data;
-use utils::logger::{log_error, log_info, log_warning};
+use utils::logging::{log_error, log_info, log_warning};
 use dotenvy::dotenv;
 use std::env;
 use tokio::time::{self, Duration};
