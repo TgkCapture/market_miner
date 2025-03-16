@@ -1,5 +1,5 @@
 use log::{error, info, warn, debug};
-use std::fs::{File, OpenOptions};
+use std::fs::{OpenOptions};
 use std::io::Write;
 use chrono::Local;
 use std::path::Path;
