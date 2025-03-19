@@ -1,6 +1,8 @@
+// db/queries.rs
 use tokio_postgres::Client;
 use crate::models::stock::Stock;
 use tokio_postgres::Error;
+use chrono::{DateTime, Utc};
 
 /// Inserts stock data while preserving historical records
 pub async fn insert_stock_data(
@@ -24,6 +26,7 @@ pub async fn insert_stock_data(
 
         if let Err(e) = result {
             eprintln!("Failed to insert stock data for '{}': {}", stock.symbol, e);
+            return Err(e);
         }
     }
     Ok(())
@@ -41,7 +44,7 @@ pub async fn get_all_stocks(client: &Client) -> Result<Vec<Stock>, Error> {
         percent_change: row.get(4),
         volume: row.get(5),
         turnover: row.get(6),
-        timestamp: row.get(7),
+        timestamp: row.get::<_, DateTime<Utc>>(7), 
     }).collect();
 
     Ok(stocks)
