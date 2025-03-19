@@ -1,7 +1,8 @@
-use log::{error, info, warn};
-use std::fs::File;
+use log::{error, info, warn, debug};
+use std::fs::{OpenOptions};
 use std::io::Write;
 use chrono::Local;
+use std::path::Path;
 
 /// Logs an error message and writes it to a log file.
 pub fn log_error(message: &str) {
@@ -27,17 +28,30 @@ pub fn log_warning(message: &str) {
     }
 }
 
+/// Logs a debug message and writes it to a log file.
+pub fn log_debug(message: &str) {
+    debug!("{}", message);
+    if let Err(e) = write_to_log_file(format!("DEBUG: {}", message)) {
+        eprintln!("Failed to write to log file: {}", e);
+    }
+}
+
 /// Writes a message to a log file.
 fn write_to_log_file(message: String) -> Result<(), std::io::Error> {
-    let log_dir = std::path::Path::new("logs");
+    let log_dir = Path::new("logs");
     if !log_dir.exists() {
-        std::fs::create_dir_all(log_dir)?;
+        if let Err(e) = std::fs::create_dir_all(log_dir) {
+            eprintln!("Failed to create log directory: {}", e);
+            return Err(e);
+        }
     }
-    let mut file = File::options()
+
+    let mut file = OpenOptions::new()
         .append(true)
         .create(true)
         .open(log_dir.join("app.log"))?;
 
     writeln!(file, "{}: {}", Local::now().format("%Y-%m-%d %H:%M:%S"), message)?;
+    file.flush()?; // Ensure data is written immediately
     Ok(())
 }

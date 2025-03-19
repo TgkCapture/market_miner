@@ -1,3 +1,4 @@
+// db/connection.rs
 use tokio_postgres::{NoTls, Error};
 use dotenvy::dotenv;
 use std::env;
@@ -18,7 +19,6 @@ fn get_db_config() -> (String, String, String, String, String) {
 pub async fn create_database_if_not_exists() -> Result<(), Error> {
     let (host, user, password, dbname, port) = get_db_config();
     
-    // Connect to the default 'postgres' database
     let admin_conn_str = format!("host={} user={} password={} port={} dbname=postgres", host, user, password, port);
     
     let (client, connection) = tokio_postgres::connect(&admin_conn_str, NoTls).await?;
@@ -34,7 +34,7 @@ pub async fn create_database_if_not_exists() -> Result<(), Error> {
     if exists.is_empty() {
         println!("Database '{}' does not exist. Creating...", dbname);
         client
-            .execute(format!("CREATE DATABASE {}", dbname).as_str(), &[])
+            .execute(&format!("CREATE DATABASE {}", dbname), &[])
             .await?;
     } else {
         println!("Database '{}' already exists.", dbname);
@@ -55,7 +55,7 @@ pub async fn connect_db() -> Result<tokio_postgres::Client, Error> {
         }
     });
 
-    // Create table if it does not exist
+    // Ensure the stocks table exists
     client.execute(
         "CREATE TABLE IF NOT EXISTS stocks (
             id SERIAL PRIMARY KEY,
@@ -71,31 +71,4 @@ pub async fn connect_db() -> Result<tokio_postgres::Client, Error> {
     ).await?;
 
     Ok(client)
-}
-
-/// Inserts stock data while preserving historical records
-pub async fn insert_stock_data(
-    client: &tokio_postgres::Client, 
-    stocks: Vec<crate::models::Stock>
-) -> Result<(), Error> {
-    for stock in stocks {
-        let result = client.execute(
-            "INSERT INTO stocks (symbol, open_price, close_price, percent_change, volume, turnover, timestamp) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7)",
-            &[
-                &stock.symbol,
-                &stock.open_price,
-                &stock.close_price,
-                &stock.percent_change,
-                &stock.volume,
-                &stock.turnover,
-                &stock.timestamp, 
-            ],
-        ).await;
-
-        if let Err(e) = result {
-            eprintln!("Failed to insert stock data for '{}': {}", stock.symbol, e);
-        }
-    }
-    Ok(())
 }
