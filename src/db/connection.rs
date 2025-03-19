@@ -1,3 +1,4 @@
+// db/connection.rs
 use tokio_postgres::{NoTls, Error};
 use dotenvy::dotenv;
 use std::env;
@@ -33,7 +34,7 @@ pub async fn create_database_if_not_exists() -> Result<(), Error> {
     if exists.is_empty() {
         println!("Database '{}' does not exist. Creating...", dbname);
         client
-            .execute(format!("CREATE DATABASE {}", dbname).as_str(), &[])
+            .execute(&format!("CREATE DATABASE {}", dbname), &[])
             .await?;
     } else {
         println!("Database '{}' already exists.", dbname);
