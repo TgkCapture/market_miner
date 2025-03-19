@@ -1,20 +1,25 @@
-use axum::{Json, response::IntoResponse};
-use serde_json::json;
+// api/handlers.rs
+use actix_web::{HttpResponse};
 use crate::db::queries;
 use crate::db::connection::connect_db;
+use crate::api::response::{success_response, error_response};
 
-pub async fn get_all_stocks() -> impl IntoResponse {
+// Handler to get all stocks
+pub async fn get_all_stocks() -> HttpResponse {
     let conn = match connect_db().await {
         Ok(client) => client,
-        Err(err) => return Json(json!({"error": format!("Database connection failed: {}", err)})),
+        Err(err) => {
+            return error_response(&format!("Database connection failed: {}", err));
+        }
     };
 
     match queries::get_all_stocks(&conn).await {
-        Ok(stocks) => Json(json!({ "status": "success", "data": stocks })),  
-        Err(err) => Json(json!({ "status": "error", "message": format!("Database error: {}", err) })),
+        Ok(stocks) => success_response(stocks),
+        Err(err) => error_response(&format!("Database error: {}", err)),
     }
 }
 
-pub async fn health_check() -> impl IntoResponse {
-    Json(json!({ "status": "ok" }))
+// Health check handler
+pub async fn health_check() -> HttpResponse {
+    success_response("ok")
 }
