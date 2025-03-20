@@ -10,7 +10,6 @@ use scraper::job::start_scraping;
 use utils::logging::{log_error, log_info};
 use dotenvy::dotenv;
 use std::env;
-// use tokio::time::{self, Duration};
 use actix_web::{App, HttpServer};
 use api::routes::configure_routes;
 
@@ -18,6 +17,11 @@ use api::routes::configure_routes;
 async fn main() {
     dotenv().ok();
     log_info("Starting Market Miner...");
+
+    // Retrieve API host and port from .env
+    let api_host = env::var("API_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let api_port = env::var("API_PORT").unwrap_or_else(|_| "3000".to_string());
+    let api_address = format!("{}:{}", api_host, api_port);
 
     // Initialize the database
     if let Err(e) = create_database_if_not_exists().await {
@@ -38,13 +42,14 @@ async fn main() {
         App::new()
             .configure(configure_routes)
     })
-    .bind("127.0.0.1:3000") 
+    .bind(&api_address)
     .unwrap_or_else(|e| {
-        log_error(&format!("Failed to start API server: {}", e));
+        log_error(&format!("Failed to start API server on {}: {}", api_address, e));
         std::process::exit(1);
     });
 
-    log_info("API server running on http://127.0.0.1:3000");
+    log_info(&format!("API server running on http://{}", api_address));
+    println!("API server running on http://{}", api_address);
 
     tokio::select! {
         server_result = server.run() => {
