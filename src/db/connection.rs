@@ -2,6 +2,7 @@
 use tokio_postgres::{NoTls, Error};
 use dotenvy::dotenv;
 use std::env;
+use crate::utils::logging::{log_info};
 
 fn get_db_config() -> (String, String, String, String, String) {
     dotenv().ok(); // Load .env file
@@ -37,7 +38,7 @@ pub async fn create_database_if_not_exists() -> Result<(), Error> {
             .execute(&format!("CREATE DATABASE {}", dbname), &[])
             .await?;
     } else {
-        println!("Database '{}' already exists.", dbname);
+        log_info(&format!("Database '{}' already exists.", dbname));
     }
 
     Ok(())
