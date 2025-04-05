@@ -1,9 +1,11 @@
 // api/handlers.rs
-use actix_web::{HttpResponse};
+use actix_web::{HttpResponse, web};
 use actix_web::web::Bytes;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use chrono::{DateTime, Utc};
 
+use crate::models::stock::Stock; 
 use crate::db::queries;
 use crate::db::connection::connect_db;
 use crate::api::response::{success_response, error_response};
