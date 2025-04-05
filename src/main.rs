@@ -10,9 +10,12 @@ use scraper::job::start_scraping;
 use utils::logging::{log_error, log_info};
 use dotenvy::dotenv;
 use std::env;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use chrono::Utc;
 use actix_web::{App, HttpServer};
 use api::routes::configure_routes;
-use api::routes::StockCache;
+use api::handlers::StockCache;
 
 #[tokio::main]
 async fn main() {
@@ -37,6 +40,12 @@ async fn main() {
             return;
         }
     };
+
+    // Create the shared cache
+    let cache = actix_web::web::Data::new(StockCache {
+        data: Arc::new(Mutex::new(None)),
+        last_updated: Arc::new(Mutex::new(None)),
+    });
 
     // Start the Actix-web server and the scraping loop concurrently
     let server = HttpServer::new(move || {
