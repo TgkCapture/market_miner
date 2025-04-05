@@ -56,16 +56,17 @@ pub async fn get_current_stocks(
     // Direct scrape if cache stale
     match fetch_stock_data(&scraper_url).await {
         Ok(stocks) => {
+            let stocks_clone = stocks.clone();
             *cache.data.lock().await = Some(stocks.clone());
             *cache.last_updated.lock().await = Some(Utc::now());
             
             tokio::spawn(async move {
                 if let Ok(client) = connect_db().await {
-                    let _ = insert_stock_data(&client, stocks).await;
+                    let _ = insert_stock_data(&client, &stocks_clone).await;  
                 }
             });
 
-            success_response(stocks)
+            success_response(stocks)  
         }
         Err(e) => error_response(&format!("Scraping error: {}", e)),
     }
