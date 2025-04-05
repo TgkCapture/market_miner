@@ -1,6 +1,11 @@
 // api/routes.rs
 use actix_web::web;
-use crate::api::handlers::{get_all_stocks, health_check};
+use std::sync::Arc;
+use std::env;
+use tokio::sync::Mutex;
+use chrono::{DateTime, Utc};
+
+use crate::api::handlers::{get_all_stocks, get_current_stocks, health_check, StockCache};
 use crate::api::ws::stock_ws;
 
 pub fn configure_routes(cfg: &mut web::ServiceConfig) {
