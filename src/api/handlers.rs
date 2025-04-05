@@ -3,12 +3,14 @@ use actix_web::{HttpResponse, web};
 use actix_web::web::Bytes;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Duration};  
 
 use crate::models::stock::Stock; 
 use crate::db::queries;
+use crate::db::insert_stock_data;
 use crate::db::connection::connect_db;
 use crate::api::response::{success_response, error_response};
+use crate::scraper::scraper::fetch_stock_data;
 
 // Shared in-memory cache
 pub struct StockCache {
@@ -41,7 +43,6 @@ pub async fn get_current_stocks(
     cache: web::Data<StockCache>,
     scraper_url: web::Data<String>,
 ) -> HttpResponse {
-    
     let now = Utc::now();
     let last_updated = *cache.last_updated.lock().await;
     let is_fresh = last_updated.map_or(false, |t| (now - t) < Duration::seconds(5));
