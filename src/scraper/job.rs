@@ -5,7 +5,7 @@ use crate::db::{insert_stock_data, Client};
 use crate::utils::logging::{log_info, log_error};
 
 /// Starts the scraping job with the given URL, interval, and database client
-pub async fn start_scraping(url: String, interval: u64, client: Client) {
+pub async fn start_scraping(url: String, interval: u64, client: Client, cache: web::Data<StockCache>) {
     let fetch_interval = Duration::from_secs(interval);
 
     loop {
@@ -13,6 +13,9 @@ pub async fn start_scraping(url: String, interval: u64, client: Client) {
 
         match fetch_stock_data(&url).await {
             Ok(stocks) => {
+                *cache.data.lock().await = Some(stocks.clone());
+                *cache.last_updated.lock().await = Some(Utc::now());
+                
                 let num_stocks = stocks.len();
                 log_info(&format!("Fetched {} stocks", num_stocks));
 
