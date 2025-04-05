@@ -27,7 +27,7 @@ pub async fn start_scraping(url: String, interval: u64, client: Client, cache: w
                 }
 
                 // Insert the fetched stocks into the database
-                if let Err(e) = insert_stock_data(&client, stocks).await {
+                if let Err(e) = insert_stock_data(&client, &stocks).await {
                     log_error(&format!("Failed to insert stock data: {}", e));
                 }
             }
