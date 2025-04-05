@@ -12,6 +12,7 @@ use dotenvy::dotenv;
 use std::env;
 use actix_web::{App, HttpServer};
 use api::routes::configure_routes;
+use api::routes::StockCache;
 
 #[tokio::main]
 async fn main() {
@@ -38,8 +39,9 @@ async fn main() {
     };
 
     // Start the Actix-web server and the scraping loop concurrently
-    let server = HttpServer::new(|| {
+    let server = HttpServer::new(move || {
         App::new()
+            .app_data(cache.clone())
             .configure(configure_routes)
     })
     .bind(&api_address)
