@@ -2,7 +2,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Stock {
     pub id: i32, 
     pub symbol: String,
