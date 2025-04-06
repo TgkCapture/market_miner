@@ -22,3 +22,4 @@ actix = "0.13"
 redis = { version = "0.22", features = ["tokio-comp"] }
 bb8 = "0.8" 
 bb8-redis = "0.14"
+actix-governor = "0.4"
