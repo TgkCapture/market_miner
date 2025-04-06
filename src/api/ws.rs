@@ -1,7 +1,7 @@
 use actix::{Actor, StreamHandler};
 use actix_web::{web, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
-use std::time::{Instant, Duration};
+use std::time::{Instant};
 
 // WebSocket connection struct
 struct StockWebSocket {

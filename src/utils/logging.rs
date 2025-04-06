@@ -1,4 +1,4 @@
-use log::{error, info, warn, debug};
+use log::{error, info};
 use std::fs::{OpenOptions};
 use std::io::Write;
 use chrono::Local;
@@ -21,20 +21,20 @@ pub fn log_info(message: &str) {
 }
 
 /// Logs a warning message and writes it to a log file.
-pub fn log_warning(message: &str) {
-    warn!("{}", message);
-    if let Err(e) = write_to_log_file(format!("WARNING: {}", message)) {
-        eprintln!("Failed to write to log file: {}", e);
-    }
-}
+// pub fn log_warning(message: &str) {
+//     warn!("{}", message);
+//     if let Err(e) = write_to_log_file(format!("WARNING: {}", message)) {
+//         eprintln!("Failed to write to log file: {}", e);
+//     }
+// }
 
 /// Logs a debug message and writes it to a log file.
-pub fn log_debug(message: &str) {
-    debug!("{}", message);
-    if let Err(e) = write_to_log_file(format!("DEBUG: {}", message)) {
-        eprintln!("Failed to write to log file: {}", e);
-    }
-}
+// pub fn log_debug(message: &str) {
+//     debug!("{}", message);
+//     if let Err(e) = write_to_log_file(format!("DEBUG: {}", message)) {
+//         eprintln!("Failed to write to log file: {}", e);
+//     }
+// }
 
 /// Writes a message to a log file.
 fn write_to_log_file(message: String) -> Result<(), std::io::Error> {

@@ -12,7 +12,7 @@ use dotenvy::dotenv;
 use std::env;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use chrono::Utc;
+// use chrono::Utc;
 use actix_web::{App, HttpServer, web::Data};
 use api::routes::configure_routes;
 use api::handlers::StockCache;
