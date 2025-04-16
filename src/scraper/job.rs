@@ -1,11 +1,14 @@
 // scraper/job.rs
 use tokio::time::{self, Duration};
+use actix_web::web;
+use chrono::Utc;
 use crate::scraper::scraper::fetch_stock_data;
 use crate::db::{insert_stock_data, Client};
 use crate::utils::logging::{log_info, log_error};
+use crate::api::handlers::StockCache;
 
 /// Starts the scraping job with the given URL, interval, and database client
-pub async fn start_scraping(url: String, interval: u64, client: Client) {
+pub async fn start_scraping(url: String, interval: u64, client: Client, cache: web::Data<StockCache>) {
     let fetch_interval = Duration::from_secs(interval);
 
     loop {
@@ -13,6 +16,9 @@ pub async fn start_scraping(url: String, interval: u64, client: Client) {
 
         match fetch_stock_data(&url).await {
             Ok(stocks) => {
+                *cache.data.lock().await = Some(stocks.clone());
+                *cache.last_updated.lock().await = Some(Utc::now());
+                
                 let num_stocks = stocks.len();
                 log_info(&format!("Fetched {} stocks", num_stocks));
 
@@ -21,7 +27,7 @@ pub async fn start_scraping(url: String, interval: u64, client: Client) {
                 }
 
                 // Insert the fetched stocks into the database
-                if let Err(e) = insert_stock_data(&client, stocks).await {
+                if let Err(e) = insert_stock_data(&client, &stocks).await {
                     log_error(&format!("Failed to insert stock data: {}", e));
                 }
             }

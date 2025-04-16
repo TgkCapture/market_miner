@@ -10,8 +10,12 @@ use scraper::job::start_scraping;
 use utils::logging::{log_error, log_info};
 use dotenvy::dotenv;
 use std::env;
-use actix_web::{App, HttpServer};
+use std::sync::Arc;
+use tokio::sync::Mutex;
+// use chrono::Utc;
+use actix_web::{App, HttpServer, web::Data};
 use api::routes::configure_routes;
+use api::handlers::StockCache;
 
 #[tokio::main]
 async fn main() {
@@ -37,9 +41,19 @@ async fn main() {
         }
     };
 
+    // Create the shared cache
+    let cache = Data::new(StockCache {
+        data: Arc::new(Mutex::new(None)),
+        last_updated: Arc::new(Mutex::new(None)),
+    });
+
+    let cache_for_server = cache.clone(); 
+    let cache_for_scraper = cache.clone(); 
+
     // Start the Actix-web server and the scraping loop concurrently
-    let server = HttpServer::new(|| {
+    let server = HttpServer::new(move || {
         App::new()
+            .app_data(cache_for_server.clone())
             .configure(configure_routes)
     })
     .bind(&api_address)
@@ -65,7 +79,7 @@ async fn main() {
                 .parse::<u64>()
                 .expect("FETCH_INTERVAL must be a valid number");
 
-            start_scraping(url, fetch_interval, client).await;
+            start_scraping(url, fetch_interval, client, cache_for_scraper.clone()).await;
         } => {}
     }
 }

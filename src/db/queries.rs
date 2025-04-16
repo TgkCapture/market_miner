@@ -7,9 +7,9 @@ use chrono::{DateTime, Utc};
 /// Inserts stock data while preserving historical records
 pub async fn insert_stock_data(
     client: &Client, 
-    stocks: Vec<Stock>
+    stocks: &Vec<Stock> 
 ) -> Result<(), Error> {
-    for stock in stocks {
+    for stock in stocks {  
         let result = client.execute(
             "INSERT INTO stocks (symbol, open_price, close_price, percent_change, volume, turnover, timestamp) 
              VALUES ($1, $2, $3, $4, $5, $6, $7)",

@@ -16,3 +16,10 @@ log = "0.4.26"
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4"] }
 chrono = { version = "0.4", features = ["serde"] }
 actix-web = "4.0"
+
+actix-web-actors = "4"
+actix = "0.13"
+redis = { version = "0.22", features = ["tokio-comp"] }
+bb8 = "0.8" 
+bb8-redis = "0.14"
+actix-governor = "0.4"
