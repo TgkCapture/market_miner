@@ -1,6 +1,17 @@
+# Rust
 /target
+
+# Local config and data
 /.env
 /data
-.history/
 logs/
+
+# Dashboard
+web/node_modules
+web/dist
+
+# Editors and OS
 .vscode
+.idea
+.history/
+.DS_Store
