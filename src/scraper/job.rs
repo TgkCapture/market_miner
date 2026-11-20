@@ -1,40 +1,41 @@
-// scraper/job.rs
-use tokio::time::{self, Duration};
-use actix_web::web;
-use chrono::Utc;
-use crate::scraper::scraper::fetch_stock_data;
-use crate::db::{insert_stock_data, Client};
-use crate::utils::logging::{log_info, log_error};
-use crate::api::handlers::StockCache;
+//! Background task: scrape on a timer, save new data and publish it to live subscribers.
 
-/// Starts the scraping job with the given URL, interval, and database client
-pub async fn start_scraping(url: String, interval: u64, client: Client, cache: web::Data<StockCache>) {
-    let fetch_interval = Duration::from_secs(interval);
+use std::time::Duration;
 
+use tokio::time::{MissedTickBehavior, interval};
+
+use crate::db;
+use crate::scraper::MseClient;
+use crate::state::AppState;
+
+pub async fn run(state: AppState, client: MseClient, every: Duration) {
+    let mut ticker = interval(every);
+    ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
     loop {
-        log_info("Fetching stock data...");
-
-        match fetch_stock_data(&url).await {
-            Ok(stocks) => {
-                *cache.data.lock().await = Some(stocks.clone());
-                *cache.last_updated.lock().await = Some(Utc::now());
-                
-                let num_stocks = stocks.len();
-                log_info(&format!("Fetched {} stocks", num_stocks));
-
-                if num_stocks == 0 {
-                    log_error("No stocks were fetched from the API.");
-                }
-
-                // Insert the fetched stocks into the database
-                if let Err(e) = insert_stock_data(&client, &stocks).await {
-                    log_error(&format!("Failed to insert stock data: {}", e));
-                }
-            }
-            Err(e) => log_error(&format!("Error fetching stock data: {}", e)),
-        }
-
-        log_info(&format!("Waiting for {} seconds before next fetch...", fetch_interval.as_secs()));
-        time::sleep(fetch_interval).await;
+        ticker.tick().await;
+        scrape_once(&state, &client).await;
     }
+}
+
+pub async fn scrape_once(state: &AppState, client: &MseClient) {
+    let result = async {
+        let snapshot = client.fetch_snapshot().await.map_err(|e| e.to_string())?;
+        let inserted = db::save_snapshot(&state.pool, &snapshot)
+            .await
+            .map_err(|e| format!("saving snapshot: {e}"))?;
+        tracing::info!(
+            as_of = %snapshot.as_of,
+            securities = snapshot.quotes.len(),
+            new_quotes = inserted,
+            "scraped mainboard"
+        );
+        state.publish(snapshot).await;
+        Ok::<(), String>(())
+    }
+    .await;
+
+    if let Err(e) = &result {
+        tracing::error!(error = %e, "scrape failed");
+    }
+    state.record_scrape(result).await;
 }

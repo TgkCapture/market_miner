@@ -1,85 +1,73 @@
-// main.rs
-mod db;
-mod scraper;
-mod models;
-mod utils;
-mod api;
+use anyhow::Context;
+use tracing_subscriber::EnvFilter;
 
-use db::{create_database_if_not_exists, connect_db};
-use scraper::job::start_scraping;
-use utils::logging::{log_error, log_info};
-use dotenvy::dotenv;
-use std::env;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-// use chrono::Utc;
-use actix_web::{App, HttpServer, web::Data};
-use api::routes::configure_routes;
-use api::handlers::StockCache;
+use market_miner::config::Config;
+use market_miner::scraper::{MseClient, job};
+use market_miner::state::AppState;
+use market_miner::{api, db};
 
 #[tokio::main]
-async fn main() {
-    dotenv().ok();
-    log_info("Starting Market Miner...");
+async fn main() -> anyhow::Result<()> {
+    dotenvy::dotenv().ok();
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("market_miner=info,tower_http=info")),
+        )
+        .init();
 
-    // Retrieve API host and port from .env
-    let api_host = env::var("API_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-    let api_port = env::var("API_PORT").unwrap_or_else(|_| "3000".to_string());
-    let api_address = format!("{}:{}", api_host, api_port);
+    let config = Config::from_env()?;
 
-    // Initialize the database
-    if let Err(e) = create_database_if_not_exists().await {
-        log_error(&format!("Failed to create database: {}", e));
-        return;
+    let pool = db::connect(&config.database_url)
+        .await
+        .context("connecting to Postgres")?;
+    db::migrate(&pool)
+        .await
+        .context("running database migrations")?;
+
+    let state = AppState::new(pool);
+    if let Some(snapshot) = db::latest_snapshot(&state.pool).await? {
+        tracing::info!(as_of = %snapshot.as_of, "loaded latest snapshot from the database");
+        state.publish(snapshot).await;
     }
 
-    let client = match connect_db().await {
-        Ok(client) => client,
-        Err(e) => {
-            log_error(&format!("Failed to connect to database: {}", e));
-            return;
+    if config.scraper_enabled {
+        let client = MseClient::new(&config.mse_url)?;
+        tracing::info!(url = %config.mse_url, every = ?config.scrape_interval, "starting scraper");
+        tokio::spawn(job::run(state.clone(), client, config.scrape_interval));
+    } else {
+        tracing::warn!("scraper disabled (SCRAPER_ENABLED=false)");
+    }
+
+    let app = api::router(state, Some(&config.static_dir));
+    let listener = tokio::net::TcpListener::bind(config.bind_addr)
+        .await
+        .with_context(|| format!("binding {}", config.bind_addr))?;
+    tracing::info!("listening on http://{}", config.bind_addr);
+
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
+    Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c().await.ok();
+    };
+    #[cfg(unix)]
+    let terminate = async {
+        if let Ok(mut s) = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+        {
+            s.recv().await;
         }
     };
-
-    // Create the shared cache
-    let cache = Data::new(StockCache {
-        data: Arc::new(Mutex::new(None)),
-        last_updated: Arc::new(Mutex::new(None)),
-    });
-
-    let cache_for_server = cache.clone(); 
-    let cache_for_scraper = cache.clone(); 
-
-    // Start the Actix-web server and the scraping loop concurrently
-    let server = HttpServer::new(move || {
-        App::new()
-            .app_data(cache_for_server.clone())
-            .configure(configure_routes)
-    })
-    .bind(&api_address)
-    .unwrap_or_else(|e| {
-        log_error(&format!("Failed to start API server on {}: {}", api_address, e));
-        std::process::exit(1);
-    });
-
-    log_info(&format!("API server running on http://{}", api_address));
-    println!("API server running on http://{}", api_address);
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
 
     tokio::select! {
-        server_result = server.run() => {
-            if let Err(e) = server_result {
-                log_error(&format!("API server error: {}", e));
-            }
-        }
-        _ = async {
-            // Start the scraping loop
-            let url = env::var("STOCK_API_URL").expect("STOCK_API_URL must be set");
-            let fetch_interval = env::var("FETCH_INTERVAL")
-                .unwrap_or_else(|_| "300".to_string())
-                .parse::<u64>()
-                .expect("FETCH_INTERVAL must be a valid number");
-
-            start_scraping(url, fetch_interval, client, cache_for_scraper.clone()).await;
-        } => {}
+        _ = ctrl_c => {},
+        _ = terminate => {},
     }
+    tracing::info!("shutting down");
 }

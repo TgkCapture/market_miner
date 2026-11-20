@@ -1,25 +1,29 @@
 [package]
 name = "market_miner"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
+rust-version = "1.85"
+description = "Scrapes Malawi Stock Exchange prices, stores their history and serves them through an API and live dashboard."
+license = "MIT"
+readme = "README.md"
 
 [dependencies]
-reqwest = { version = "0.12", features = ["json"] }
-tokio = { version = "1", features = ["full"] }
-scraper = "0.23.1"
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
-dotenv = "0.15.0"
-dotenvy = "0.15"
-pretty_env_logger = "0.5.0"
-log = "0.4.26"
-tokio-postgres = { version = "0.7", features = ["with-chrono-0_4"] }
+anyhow = "1"
+axum = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
-actix-web = "4.0"
+dotenvy = "0.15"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+scraper = "0.23"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "chrono", "macros", "migrate"] }
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tower-http = { version = "0.6", features = ["fs", "trace", "compression-gzip"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-actix-web-actors = "4"
-actix = "0.13"
-redis = { version = "0.22", features = ["tokio-comp"] }
-bb8 = "0.8" 
-bb8-redis = "0.14"
-actix-governor = "0.4"
+[dev-dependencies]
+http-body-util = "0.1"
+tower = { version = "0.5", features = ["util"] }

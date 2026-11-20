@@ -1,0 +1,56 @@
+name: market-miner
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-market_miner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-market_miner}
+      POSTGRES_DB: ${POSTGRES_DB:-market_miner}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-market_miner}:${POSTGRES_PASSWORD:-market_miner}@db:5432/${POSTGRES_DB:-market_miner}
+      SCRAPE_INTERVAL_SECS: ${SCRAPE_INTERVAL_SECS:-300}
+      SCRAPER_ENABLED: ${SCRAPER_ENABLED:-true}
+      RUST_LOG: ${RUST_LOG:-market_miner=info,tower_http=info}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  # Runs the Rust checks and tests in a container: docker compose run --rm test
+  test:
+    profiles: ["dev"]
+    image: rust:1.89-slim-bookworm
+    working_dir: /src
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-market_miner}:${POSTGRES_PASSWORD:-market_miner}@db:5432/${POSTGRES_DB:-market_miner}
+      CARGO_TARGET_DIR: /target
+    volumes:
+      - .:/src
+      - cargo-registry:/usr/local/cargo/registry
+      - cargo-target:/target
+    command: >
+      sh -c "rustup component add rustfmt clippy >/dev/null 2>&1;
+             cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test"
+
+volumes:
+  pgdata:
+  cargo-registry:
+  cargo-target:
